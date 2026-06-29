@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=22"
   },
   "scripts": {
     "dev": "concurrently \"node --watch server/index.js\" \"vite --host 127.0.0.1\"",
