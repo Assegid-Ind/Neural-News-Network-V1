@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: neural-news-network
+    runtime: node
+    plan: starter
+    buildCommand: pnpm install --frozen-lockfile && pnpm run build
+    startCommand: pnpm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: CREATOR_KEY
+        sync: false
+      - key: NNN_REFRESH_MS
+        value: 480000
