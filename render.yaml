@@ -2,8 +2,8 @@ services:
   - type: web
     name: neural-news-network
     runtime: node
-    plan: starter
-    buildCommand: pnpm install --frozen-lockfile && pnpm run build
+    plan: free
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm run build
     startCommand: pnpm start
     healthCheckPath: /api/health
     envVars:
@@ -11,5 +11,13 @@ services:
         value: 22
       - key: CREATOR_KEY
         sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4.1-mini
+      - key: OPENAI_AGENT_CONCURRENCY
+        value: 6
+      - key: OPENAI_MAX_OUTPUT_TOKENS
+        value: 1600
       - key: NNN_REFRESH_MS
         value: 480000

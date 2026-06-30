@@ -1,6 +1,7 @@
 import { XMLParser } from "fast-xml-parser";
 import { sources } from "./data/sources.js";
 import { fallbackArticles } from "./data/fallback.js";
+import { generatePerspectiveArticle, openAiStatus } from "./openaiClient.js";
 
 const parser = new XMLParser({
   ignoreAttributes: false,
@@ -67,9 +68,8 @@ const weakLeadWords = new Set(["watch", "live", "updates", "latest", "briefing"]
 export async function buildIssue(agents, options = {}) {
   const articles = await collectArticles();
   const clusters = clusterArticles(articles).slice(0, 12);
-  const stories = clusters.map((cluster, index) => {
+  const storyDrafts = clusters.map((cluster, index) => {
     const factPack = createFactPack(cluster);
-    const perspectives = agents.map((agent) => writePerspective(agent, factPack));
     return {
       id: `story-${index}-${hash(factPack.headline)}`,
       rank: index + 1,
@@ -79,7 +79,7 @@ export async function buildIssue(agents, options = {}) {
       heat: Math.min(99, 38 + cluster.length * 10 + factPack.confirmed.length * 4 + factPack.sourceDossiers.length * 3),
       factPack,
       synthesis: writeSynthesis(factPack),
-      perspectives,
+      perspectives: [],
       sources: cluster.map(({ headline, source, link, publishedAt }) => ({
         headline,
         source,
@@ -88,17 +88,50 @@ export async function buildIssue(agents, options = {}) {
       }))
     };
   });
+  const stories = await attachPerspectives(storyDrafts, agents);
 
   return {
     publication: "Neural News Network",
     generatedAt: new Date().toISOString(),
     refreshEveryMs: options.refreshEveryMs || 1000 * 60 * 8,
+    generationMode: openAiStatus().available ? "openai" : "local-fallback",
+    ai: openAiStatus(),
     sourceCount: articles.length,
     enrichedSourceCount: articles.filter((article) => article.enriched).length,
     storyCount: stories.length,
     lead: stories[0] || null,
     stories
   };
+}
+
+async function attachPerspectives(stories, agents) {
+  const jobs = stories.flatMap((story, storyIndex) =>
+    agents.map((agent, agentIndex) => async () => ({
+      storyIndex,
+      agentIndex,
+      perspective: await writePerspective(agent, story.factPack)
+    }))
+  );
+  const results = await runJobPool(jobs, Number(process.env.OPENAI_AGENT_CONCURRENCY || 2));
+  const grouped = new Map(results.map((result) => [`${result.storyIndex}:${result.agentIndex}`, result.perspective]));
+  return stories.map((story, storyIndex) => ({
+    ...story,
+    perspectives: agents.map((_, agentIndex) => grouped.get(`${storyIndex}:${agentIndex}`)).filter(Boolean)
+  }));
+}
+
+async function runJobPool(jobs, concurrency) {
+  const results = [];
+  let index = 0;
+  const workers = Array.from({ length: Math.min(Math.max(1, concurrency), jobs.length) }, async () => {
+    while (index < jobs.length) {
+      const current = jobs[index];
+      index += 1;
+      results.push(await current());
+    }
+  });
+  await Promise.all(workers);
+  return results;
 }
 
 async function collectArticles() {
@@ -742,7 +775,27 @@ function writeSynthesis(factPack) {
   ].join("\n\n");
 }
 
-function writePerspective(agent, factPack) {
+async function writePerspective(agent, factPack) {
+  try {
+    const generated = await generatePerspectiveArticle(agent, factPack);
+    if (generated) {
+      return {
+        agentId: agent.id,
+        alias: agent.alias,
+        kind: agent.kind,
+        publicLine: agent.publicLine,
+        promptUsed: agent.editorialPrompt,
+        generation: "openai",
+        headline: `${agent.alias}: ${generated.headline}`,
+        dek: generated.dek,
+        body: generated.body,
+        uncertaintyNote: generated.uncertaintyNote
+      };
+    }
+  } catch (error) {
+    console.warn(`OpenAI generation failed for ${agent.alias}: ${error.message}`);
+  }
+
   const core = {
     "Institutional Realist": institutionalTake,
     "Legal-Philosophical Analyst": legalTake,
@@ -756,6 +809,7 @@ function writePerspective(agent, factPack) {
     kind: agent.kind,
     publicLine: agent.publicLine,
     promptUsed: agent.editorialPrompt,
+    generation: "local-fallback",
     headline: `${agent.alias}: ${titleFor(agent, factPack)}`,
     body: writer(agent, factPack)
   };

@@ -349,7 +349,9 @@ function StoryReader({ story, onBack }) {
               <div className="analysis-card" key={view.agentId}>
                 <span className="analysis-alias">{view.alias}</span>
                 <h3>{view.headline.replace(`${view.alias}: `, "")}</h3>
+                {view.dek ? <p className="analysis-dek">{view.dek}</p> : null}
                 <RichText text={view.body} />
+                {view.uncertaintyNote ? <small>{view.uncertaintyNote}</small> : null}
               </div>
             ))}
           </div>

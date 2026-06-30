@@ -1,4 +1,5 @@
 import express from "express";
+import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildIssue } from "./newsEngine.js";
@@ -6,6 +7,7 @@ import { createHistoricalAgent, readAgents } from "./agents.js";
 
 const app = express();
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+loadLocalEnv(path.join(__dirname, "..", ".env"));
 const port = Number(process.env.PORT || process.env.NNN_PORT || 4177);
 const creatorKey = process.env.CREATOR_KEY || "creator";
 let issueCache = null;
@@ -82,3 +84,17 @@ app.get(/^\/(?!api).*/, (req, res) => {
 app.listen(port, "0.0.0.0", () => {
   console.log(`Neural News Network running on port ${port}`);
 });
+
+function loadLocalEnv(filePath) {
+  if (!fs.existsSync(filePath)) return;
+  const raw = fs.readFileSync(filePath, "utf8");
+  for (const line of raw.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const match = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+    if (!match) continue;
+    const [, key, rawValue] = match;
+    if (process.env[key]) continue;
+    process.env[key] = rawValue.replace(/^["']|["']$/g, "");
+  }
+}

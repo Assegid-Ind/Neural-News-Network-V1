@@ -525,6 +525,11 @@ img {
   letter-spacing: -0.01em;
 }
 
+.analysis-dek {
+  color: var(--muted);
+  font-style: italic;
+}
+
 .analysis-card p {
   margin: 0 0 13px;
   font-family: Georgia, "Times New Roman", serif;
@@ -535,6 +540,14 @@ img {
 
 .analysis-card p:last-child {
   margin-bottom: 0;
+}
+
+.analysis-card small {
+  color: var(--muted);
+  display: block;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  margin-top: 14px;
 }
 
 .source-panel {
