@@ -22,6 +22,7 @@ Useful environment variables:
 
 - `OPENAI_API_KEY`: server-only OpenAI API key. Never commit this.
 - `OPENAI_MODEL`: defaults to `gpt-4.1-mini`.
-- `OPENAI_AGENT_CONCURRENCY`: defaults to `2`.
-- `OPENAI_MAX_OUTPUT_TOKENS`: defaults to `1400`.
+- `OPENAI_AGENT_CONCURRENCY`: defaults to `6`.
+- `OPENAI_MAX_OUTPUT_TOKENS`: defaults to `1600`.
+- `OPENAI_RETRY_DISABLED_MS`: how long to pause OpenAI calls after quota/auth failures before trying again.
 - `CREATOR_KEY`: unlocks creator-only refresh controls.

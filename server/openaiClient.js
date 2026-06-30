@@ -1,7 +1,12 @@
 const openAiEndpoint = "https://api.openai.com/v1/responses";
 let disabledReason = "";
+let disabledUntil = 0;
 
 export function hasOpenAiKey() {
+  if (disabledUntil && Date.now() > disabledUntil) {
+    disabledReason = "";
+    disabledUntil = 0;
+  }
   return Boolean(process.env.OPENAI_API_KEY) && !disabledReason;
 }
 
@@ -91,6 +96,7 @@ export async function generatePerspectiveArticle(agent, factPack) {
     const message = data?.error?.message || `OpenAI request failed with ${response.status}`;
     if (isConfigurationFailure(response.status, message)) {
       disabledReason = message;
+      disabledUntil = Date.now() + Number(process.env.OPENAI_RETRY_DISABLED_MS || 1000 * 60 * 15);
     }
     throw new Error(message);
   }

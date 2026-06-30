@@ -19,5 +19,7 @@ services:
         value: 6
       - key: OPENAI_MAX_OUTPUT_TOKENS
         value: 1600
+      - key: OPENAI_RETRY_DISABLED_MS
+        value: 900000
       - key: NNN_REFRESH_MS
         value: 480000
